@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowUpIcon, CheckIcon, XIcon } from 'lucide-react';
+import { ArrowUpIcon, CheckIcon, XIcon, ListChecksIcon } from 'lucide-react';
 
 export interface SuggestionItem {
   text: string;
@@ -19,6 +18,7 @@ export interface AnalysisResultData {
   }[];
   suggestions: SuggestionItem[];
   missingKeywords: string[];
+  improvementPlan?: string[];
 }
 
 interface AnalysisResultProps {
@@ -52,7 +52,7 @@ const AnalysisResult = ({ result, loading }: AnalysisResultProps) => {
     return null;
   }
 
-  const { matchPercentage, keySkillsMatch, suggestions, missingKeywords } = result;
+  const { matchPercentage, keySkillsMatch, suggestions, missingKeywords, improvementPlan } = result;
   
   const getMatchColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600';
@@ -113,8 +113,22 @@ const AnalysisResult = ({ result, loading }: AnalysisResultProps) => {
         
         <Separator />
         
+        {improvementPlan && improvementPlan.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="font-medium flex items-center">
+              <ListChecksIcon className="h-5 w-5 mr-2 text-careerSync-blue" />
+              Action Plan to Improve
+            </h3>
+            <ol className="list-decimal pl-5 space-y-2">
+              {improvementPlan.map((step, index) => (
+                <li key={index} className="text-sm">{step}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+        
         <div className="space-y-4">
-          <h3 className="font-medium">Improvement Suggestions</h3>
+          <h3 className="font-medium">Areas for Improvement</h3>
           {suggestions.filter(s => s.type === 'improvement').map((suggestion, index) => (
             <div key={index} className="flex items-start space-x-2 p-2 bg-red-50 rounded-md">
               <ArrowUpIcon className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
@@ -124,7 +138,7 @@ const AnalysisResult = ({ result, loading }: AnalysisResultProps) => {
         </div>
         
         <div className="space-y-4">
-          <h3 className="font-medium">Strengths</h3>
+          <h3 className="font-medium">Your Strengths</h3>
           {suggestions.filter(s => s.type === 'strength').map((suggestion, index) => (
             <div key={index} className="flex items-start space-x-2 p-2 bg-green-50 rounded-md">
               <CheckIcon className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />

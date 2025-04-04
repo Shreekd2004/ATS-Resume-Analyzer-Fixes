@@ -16,40 +16,95 @@ export const analyzeResume = async (
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
     
-    // Mock response for development purposes
+    // Generate a random match percentage between 50 and 95
+    const matchPercentage = Math.floor(Math.random() * 46) + 50;
+    
+    // Create a set of skills with random match status
+    const allSkills = ["React", "TypeScript", "Node.js", "CI/CD", "AWS", "Testing", 
+                       "Docker", "Kubernetes", "GraphQL", "REST API", "SQL", "NoSQL",
+                       "Python", "Java", "Agile", "Scrum", "DevOps"];
+    
+    // Randomly select skills (between 5 and 10)
+    const skillCount = Math.floor(Math.random() * 6) + 5;
+    const selectedSkills = [...allSkills].sort(() => 0.5 - Math.random()).slice(0, skillCount);
+    
+    // Randomly determine which skills are matched (more matches for higher percentage)
+    const matchedCount = Math.round((matchPercentage / 100) * selectedSkills.length);
+    const shuffledSkills = [...selectedSkills].sort(() => 0.5 - Math.random());
+    
+    const keySkillsMatch = selectedSkills.map(skill => ({
+      skill,
+      matched: shuffledSkills.indexOf(skill) < matchedCount
+    }));
+    
+    // Generate missing keywords
+    const missingSkills = allSkills
+      .filter(skill => !selectedSkills.includes(skill))
+      .sort(() => 0.5 - Math.random())
+      .slice(0, Math.floor(Math.random() * 4) + 2);
+    
+    // Generate improvement suggestions based on missing keywords
+    const improvementSuggestions = [
+      { 
+        text: `Add specific metrics and outcomes to demonstrate your accomplishments`, 
+        type: "improvement" 
+      },
+      { 
+        text: `Include keywords like '${missingSkills.join("', '")}' which are mentioned in the job description`, 
+        type: "improvement" 
+      },
+      { 
+        text: `Consider reorganizing your resume to highlight your most relevant experience first`, 
+        type: "improvement" 
+      },
+      {
+        text: `Use action verbs to describe your experiences (e.g., 'implemented', 'developed', 'managed')`,
+        type: "improvement"
+      },
+      {
+        text: `Tailor your resume summary to specifically address this role's requirements`,
+        type: "improvement"
+      }
+    ];
+    
+    // Generate strength points based on matched skills
+    const matchedSkills = keySkillsMatch
+      .filter(item => item.matched)
+      .map(item => item.skill);
+    
+    const strengthSuggestions = [
+      { 
+        text: `Your strong background in ${matchedSkills.slice(0, 2).join(" and ")} aligns well with the job requirements`, 
+        type: "strength" 
+      },
+      { 
+        text: `Your experience with ${matchedSkills[Math.floor(Math.random() * matchedSkills.length)]} is valuable for this position`, 
+        type: "strength" 
+      }
+    ];
+
+    if (matchedSkills.length > 2) {
+      strengthSuggestions.push({
+        text: `Your diverse skill set including ${matchedSkills.slice(0, 3).join(", ")} makes you a well-rounded candidate`,
+        type: "strength"
+      });
+    }
+    
+    // Combine all suggestions
+    const suggestions = [...improvementSuggestions, ...strengthSuggestions];
+    
     const mockResult: AnalysisResultData = {
-      matchPercentage: 78,
-      keySkillsMatch: [
-        { skill: "React", matched: true },
-        { skill: "TypeScript", matched: true },
-        { skill: "Node.js", matched: true },
-        { skill: "CI/CD", matched: false },
-        { skill: "AWS", matched: false },
-        { skill: "Testing", matched: true },
-      ],
-      suggestions: [
-        { 
-          text: "Add specific metrics and outcomes to your project descriptions", 
-          type: "improvement" 
-        },
-        { 
-          text: "Include keywords like 'AWS', 'CI/CD', and 'Cloud Infrastructure' which are mentioned in the job description", 
-          type: "improvement" 
-        },
-        { 
-          text: "Your strong background in React and TypeScript aligns well with the job requirements", 
-          type: "strength" 
-        },
-        { 
-          text: "Your testing experience is valuable for this position", 
-          type: "strength" 
-        },
-        { 
-          text: "Consider reorganizing your resume to highlight your most relevant experience first", 
-          type: "improvement" 
-        },
-      ],
-      missingKeywords: ["AWS", "CI/CD", "Docker", "Kubernetes"]
+      matchPercentage,
+      keySkillsMatch,
+      suggestions,
+      missingKeywords: missingSkills,
+      improvementPlan: [
+        `Update your resume summary to target this specific role`,
+        `Add the missing keywords: ${missingSkills.join(", ")}`,
+        `Quantify your achievements with specific metrics`,
+        `Reorganize to prioritize your most relevant experience`,
+        `Consider getting certifications in ${missingSkills[0] || "relevant technologies"}`
+      ]
     };
     
     return mockResult;
