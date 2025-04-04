@@ -1,13 +1,21 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowUpIcon, CheckIcon, XIcon, ListChecksIcon } from 'lucide-react';
+import { ArrowUpIcon, CheckIcon, XIcon, ListChecksIcon, UserIcon } from 'lucide-react';
 
 export interface SuggestionItem {
   text: string;
   type: 'strength' | 'improvement';
+}
+
+export interface ProfileDetail {
+  name: string;
+  email: string;
+  phone: string;
+  linkedin: string;
 }
 
 export interface AnalysisResultData {
@@ -19,6 +27,7 @@ export interface AnalysisResultData {
   suggestions: SuggestionItem[];
   missingKeywords: string[];
   improvementPlan?: string[];
+  profileDetails?: ProfileDetail;
 }
 
 interface AnalysisResultProps {
@@ -52,7 +61,7 @@ const AnalysisResult = ({ result, loading }: AnalysisResultProps) => {
     return null;
   }
 
-  const { matchPercentage, keySkillsMatch, suggestions, missingKeywords, improvementPlan } = result;
+  const { matchPercentage, keySkillsMatch, suggestions, missingKeywords, improvementPlan, profileDetails } = result;
   
   const getMatchColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600';
@@ -81,6 +90,21 @@ const AnalysisResult = ({ result, loading }: AnalysisResultProps) => {
           </div>
           <Progress value={matchPercentage} className={getMatchBg(matchPercentage)} />
         </div>
+
+        {profileDetails && (
+          <div className="space-y-2">
+            <h3 className="font-medium flex items-center">
+              <UserIcon className="h-5 w-5 mr-2 text-careerSync-blue" />
+              Profile Details
+            </h3>
+            <div className="bg-gray-50 p-3 rounded-md space-y-1 text-sm">
+              <p><strong>Name:</strong> {profileDetails.name}</p>
+              <p><strong>Email:</strong> {profileDetails.email}</p>
+              <p><strong>Phone:</strong> {profileDetails.phone}</p>
+              <p><strong>LinkedIn:</strong> {profileDetails.linkedin}</p>
+            </div>
+          </div>
+        )}
         
         <div className="space-y-2">
           <h3 className="font-medium">Key Skills</h3>
