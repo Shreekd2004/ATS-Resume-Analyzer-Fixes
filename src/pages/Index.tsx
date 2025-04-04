@@ -8,32 +8,60 @@ import Header from '@/components/Header';
 import FileUpload from '@/components/FileUpload';
 import JobDescriptionInput from '@/components/JobDescriptionInput';
 import AnalysisResult, { AnalysisResultData } from '@/components/AnalysisResult';
+import ResumeRankingList from '@/components/ResumeRankingList';
 import { extractTextFromPdf } from '@/services/pdfService';
 import { analyzeResume } from '@/services/geminiService';
 
+interface ResumeData {
+  file: File;
+  text: string;
+  result: AnalysisResultData | null;
+}
+
 const Index = () => {
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [resumeText, setResumeText] = useState<string>('');
+  const [resumeFiles, setResumeFiles] = useState<ResumeData[]>([]);
   const [jobDescription, setJobDescription] = useState<string>('');
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResultData | null>(null);
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('input');
+  const [selectedResultIndex, setSelectedResultIndex] = useState<number | null>(null);
 
-  const handleResumeUpload = async (file: File) => {
-    setResumeFile(file);
+  const handleResumeUpload = async (files: File[]) => {
     try {
-      const text = await extractTextFromPdf(file);
-      setResumeText(text);
+      const newResumeData: ResumeData[] = [];
+      
+      for (const file of files) {
+        // Check if file already exists in the list
+        const exists = resumeFiles.some(resumeData => 
+          resumeData.file.name === file.name && 
+          resumeData.file.size === file.size
+        );
+        
+        if (!exists) {
+          const text = await extractTextFromPdf(file);
+          newResumeData.push({ file, text, result: null });
+        }
+      }
+      
+      setResumeFiles(prev => [...prev, ...newResumeData]);
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
-      toast.error('Failed to extract text from the resume');
+      toast.error('Failed to extract text from one or more resumes');
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setResumeFiles(prev => prev.filter((_, i) => i !== index));
+    if (selectedResultIndex === index) {
+      setSelectedResultIndex(null);
+    } else if (selectedResultIndex !== null && selectedResultIndex > index) {
+      setSelectedResultIndex(selectedResultIndex - 1);
     }
   };
 
   const handleAnalyze = async () => {
-    if (!resumeFile) {
-      toast.error('Please upload your resume');
+    if (resumeFiles.length === 0) {
+      toast.error('Please upload at least one resume');
       return;
     }
 
@@ -46,21 +74,51 @@ const Index = () => {
       setAnalyzing(true);
       setActiveTab('result');
       
-      // In production, this would use the actual Gemini API
-      // For now, we'll use our mock service
-      const result = await analyzeResume({
-        resumeText,
-        jobDescription
-      });
+      const updatedResumeFiles = [...resumeFiles];
       
-      setAnalysisResult(result);
+      for (let i = 0; i < updatedResumeFiles.length; i++) {
+        const result = await analyzeResume({
+          resumeText: updatedResumeFiles[i].text,
+          jobDescription
+        });
+        
+        updatedResumeFiles[i].result = result;
+      }
+      
+      setResumeFiles(updatedResumeFiles);
+      
+      // Set the highest-matching resume as selected by default
+      const highestMatchIndex = updatedResumeFiles
+        .map((data, index) => ({ index, percentage: data.result?.matchPercentage || 0 }))
+        .sort((a, b) => b.percentage - a.percentage)[0]?.index || 0;
+      
+      setSelectedResultIndex(highestMatchIndex);
     } catch (error) {
-      console.error('Error analyzing resume:', error);
-      toast.error('Failed to analyze resume. Please try again.');
+      console.error('Error analyzing resumes:', error);
+      toast.error('Failed to analyze resumes. Please try again.');
     } finally {
       setAnalyzing(false);
     }
   };
+
+  const handleViewDetails = (index: number) => {
+    setSelectedResultIndex(selectedResultIndex === index ? null : index);
+  };
+
+  const completedResults = resumeFiles
+    .filter(resumeData => resumeData.result !== null)
+    .map(resumeData => ({
+      file: resumeData.file,
+      result: resumeData.result!
+    }));
+
+  const selectedResult = selectedResultIndex !== null && selectedResultIndex < resumeFiles.length
+    ? resumeFiles[selectedResultIndex].result
+    : null;
+  
+  const selectedFile = selectedResultIndex !== null && selectedResultIndex < resumeFiles.length
+    ? resumeFiles[selectedResultIndex].file
+    : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-careerSync-gray">
@@ -69,17 +127,17 @@ const Index = () => {
       <main className="flex-1 container max-w-5xl px-4 py-8">
         <section className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl font-bold text-careerSync-darkBlue mb-4">
-            Optimize Your Resume for the Job
+            Optimize Your Resumes for the Job
           </h1>
           <p className="text-lg max-w-2xl mx-auto text-gray-600">
-            Upload your resume and job description. Our AI will analyze the match and provide personalized improvement suggestions.
+            Upload multiple resumes and a job description. Our AI will analyze the match, rank the resumes, and provide personalized improvement suggestions.
           </p>
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="input">Input</TabsTrigger>
-            <TabsTrigger value="result" disabled={!analysisResult && !analyzing}>
+            <TabsTrigger value="result" disabled={completedResults.length === 0 && !analyzing}>
               Results
             </TabsTrigger>
           </TabsList>
@@ -88,7 +146,11 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardContent className="pt-6">
-                  <FileUpload onUpload={handleResumeUpload} />
+                  <FileUpload 
+                    onUpload={handleResumeUpload} 
+                    files={resumeFiles.map(data => data.file)}
+                    onRemoveFile={handleRemoveFile}
+                  />
                 </CardContent>
               </Card>
               
@@ -131,29 +193,55 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={handleAnalyze}
-                disabled={!resumeFile || !jobDescription.trim() || !apiKey.trim()}
+                disabled={resumeFiles.length === 0 || !jobDescription.trim() || !apiKey.trim()}
                 className="bg-careerSync-blue hover:bg-careerSync-darkBlue"
               >
-                Analyze Resume
+                {resumeFiles.length > 1 ? 'Analyze & Rank Resumes' : 'Analyze Resume'}
               </Button>
             </div>
           </TabsContent>
 
           <TabsContent value="result">
-            <AnalysisResult result={analysisResult} loading={analyzing} />
-            
-            <div className="flex justify-center mt-8">
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab('input')}
-                className="mr-4"
-              >
-                Back to Input
-              </Button>
-              <Button onClick={() => window.print()} variant="secondary">
-                Print Results
-              </Button>
-            </div>
+            {analyzing ? (
+              <Card className="w-full">
+                <CardContent className="pt-6">
+                  <div className="text-center p-8">
+                    <div className="animate-spin h-8 w-8 border-4 border-careerSync-blue border-t-transparent rounded-full mx-auto"></div>
+                    <p className="mt-4 text-lg">Analyzing {resumeFiles.length} resume(s)...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : completedResults.length > 0 ? (
+              <div className="space-y-6">
+                <ResumeRankingList 
+                  results={completedResults}
+                  onViewDetails={handleViewDetails}
+                  selectedIndex={selectedResultIndex}
+                />
+                
+                {selectedResult && selectedFile && (
+                  <div className="mt-8">
+                    <div className="mb-4 flex items-center">
+                      <h2 className="text-xl font-bold">Analysis for: {selectedFile.name}</h2>
+                    </div>
+                    <AnalysisResult result={selectedResult} loading={false} />
+                  </div>
+                )}
+                
+                <div className="flex justify-center mt-8">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab('input')}
+                    className="mr-4"
+                  >
+                    Back to Input
+                  </Button>
+                  <Button onClick={() => window.print()} variant="secondary">
+                    Print Results
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </TabsContent>
         </Tabs>
       </main>

@@ -21,6 +21,9 @@ const JobDescriptionInput = ({ value, onChange }: JobDescriptionInputProps) => {
         onChange={(e) => onChange(e.target.value)}
         className="min-h-[200px] mt-2 resize-y"
       />
+      <p className="text-xs text-gray-500 mt-2">
+        The job description will be used to compare against all uploaded resumes.
+      </p>
     </div>
   );
 };
