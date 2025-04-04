@@ -1,5 +1,5 @@
 
-import { AnalysisResultData } from '@/components/AnalysisResult';
+import { AnalysisResultData, SuggestionItem } from '@/components/AnalysisResult';
 
 export interface AnalysisRequest {
   resumeText: string;
@@ -44,26 +44,26 @@ export const analyzeResume = async (
       .slice(0, Math.floor(Math.random() * 4) + 2);
     
     // Generate improvement suggestions based on missing keywords
-    const improvementSuggestions = [
+    const improvementSuggestions: SuggestionItem[] = [
       { 
         text: `Add specific metrics and outcomes to demonstrate your accomplishments`, 
-        type: "improvement" 
+        type: "improvement" as const
       },
       { 
         text: `Include keywords like '${missingSkills.join("', '")}' which are mentioned in the job description`, 
-        type: "improvement" 
+        type: "improvement" as const
       },
       { 
         text: `Consider reorganizing your resume to highlight your most relevant experience first`, 
-        type: "improvement" 
+        type: "improvement" as const 
       },
       {
         text: `Use action verbs to describe your experiences (e.g., 'implemented', 'developed', 'managed')`,
-        type: "improvement"
+        type: "improvement" as const
       },
       {
         text: `Tailor your resume summary to specifically address this role's requirements`,
-        type: "improvement"
+        type: "improvement" as const
       }
     ];
     
@@ -72,26 +72,26 @@ export const analyzeResume = async (
       .filter(item => item.matched)
       .map(item => item.skill);
     
-    const strengthSuggestions = [
+    const strengthSuggestions: SuggestionItem[] = [
       { 
         text: `Your strong background in ${matchedSkills.slice(0, 2).join(" and ")} aligns well with the job requirements`, 
-        type: "strength" 
+        type: "strength" as const 
       },
       { 
         text: `Your experience with ${matchedSkills[Math.floor(Math.random() * matchedSkills.length)]} is valuable for this position`, 
-        type: "strength" 
+        type: "strength" as const
       }
     ];
 
     if (matchedSkills.length > 2) {
       strengthSuggestions.push({
         text: `Your diverse skill set including ${matchedSkills.slice(0, 3).join(", ")} makes you a well-rounded candidate`,
-        type: "strength"
+        type: "strength" as const
       });
     }
     
     // Combine all suggestions
-    const suggestions = [...improvementSuggestions, ...strengthSuggestions];
+    const suggestions: SuggestionItem[] = [...improvementSuggestions, ...strengthSuggestions];
     
     const mockResult: AnalysisResultData = {
       matchPercentage,
