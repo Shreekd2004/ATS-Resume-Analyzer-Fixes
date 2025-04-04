@@ -6,13 +6,6 @@ export interface AnalysisRequest {
   jobDescription: string;
 }
 
-export interface ProfileDetail {
-  name: string;
-  email: string;
-  phone: string;
-  linkedin: string;
-}
-
 export const analyzeResume = async (
   request: AnalysisRequest
 ): Promise<AnalysisResultData> => {
@@ -24,34 +17,7 @@ export const analyzeResume = async (
     
     const { resumeText, jobDescription } = request;
     
-    // Get profile details from resume text
-    const profileDetails = extractProfileDetails(resumeText);
-    
-    // Create the Gemini-like prompt (similar to the Python version)
-    const prompt = `
-      Act like a skilled or very experienced ATS (Application Tracking System)
-      with a deep understanding of tech field, software engineering, data science, data analyst
-      and big data engineering. Your task is to evaluate the resume based on the given job description.
-      You must consider the job market is very competitive and you should provide
-      best assistance for improving the resumes.
-      
-      Resume:
-      ${resumeText}
-      
-      Job Description:
-      ${jobDescription}
-      
-      Evaluate the match percentage between the resume and job description.
-      Identify key skills from the job description and check if they are present in the resume.
-      Identify missing keywords or skills that should be added to the resume.
-      Provide specific suggestions to improve the resume.
-      Highlight strengths in the resume that align with the job description.
-    `;
-    
-    // In a real implementation, this would call the Gemini API with the prompt
-    // For now, simulate the analysis with our existing functions, but with improved accuracy
-    
-    // Calculate match percentage with more accurate analysis
+    // More accurate analysis based on actual content comparison
     const matchPercentage = calculateMatchPercentage(resumeText, jobDescription);
     
     // Extract skills from job description
@@ -69,7 +35,7 @@ export const analyzeResume = async (
     // Find missing skills
     const missingSkills = jobSkills.filter(skill => !isSkillInResume(skill, resumeText));
     
-    // Generate comprehensive improvement suggestions based on the context
+    // Generate specific improvement suggestions based on actual content
     const improvementSuggestions = generateImprovementSuggestions(resumeText, jobDescription, missingSkills);
     
     // Generate strength points based on matched content
@@ -82,16 +48,15 @@ export const analyzeResume = async (
     // Combine all suggestions
     const suggestions: SuggestionItem[] = [...improvementSuggestions, ...strengthSuggestions];
     
-    // Generate comprehensive improvement plan
-    const improvementPlan = generateImprovementPlan(resumeText, jobDescription, missingSkills, profileDetails);
+    // Generate personalized improvement plan
+    const improvementPlan = generateImprovementPlan(resumeText, jobDescription, missingSkills);
     
     const result: AnalysisResultData = {
       matchPercentage,
       keySkillsMatch,
       suggestions,
       missingKeywords: missingSkills,
-      improvementPlan,
-      profileDetails
+      improvementPlan
     };
     
     return result;
@@ -100,52 +65,6 @@ export const analyzeResume = async (
     throw error;
   }
 };
-
-// Extract contact details from resume text
-function extractProfileDetails(resumeText: string): ProfileDetail {
-  // Default values
-  const profile = {
-    name: "Not found",
-    email: "Not found",
-    phone: "Not found",
-    linkedin: "Not found"
-  };
-  
-  // Extract email using regex
-  const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-  const emailMatch = resumeText.match(emailRegex);
-  if (emailMatch) {
-    profile.email = emailMatch[0];
-  }
-  
-  // Extract phone using regex (handles various formats)
-  const phoneRegex = /(\+\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/;
-  const phoneMatch = resumeText.match(phoneRegex);
-  if (phoneMatch) {
-    profile.phone = phoneMatch[0];
-  }
-  
-  // Extract LinkedIn URL
-  const linkedinRegex = /linkedin\.com\/in\/[a-zA-Z0-9_-]+/;
-  const linkedinMatch = resumeText.match(linkedinRegex);
-  if (linkedinMatch) {
-    profile.linkedin = linkedinMatch[0];
-  }
-  
-  // Try to extract name (more challenging)
-  // Look for patterns that might indicate a name at the beginning of the resume
-  const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  if (lines.length > 0) {
-    // The first non-empty line might be the name
-    const firstLine = lines[0];
-    // Check if it's reasonably short and doesn't look like a title/heading
-    if (firstLine.length < 50 && !firstLine.includes(':') && !firstLine.match(/resume|cv|curriculum/i)) {
-      profile.name = firstLine;
-    }
-  }
-  
-  return profile;
-}
 
 // Calculate match percentage based on keyword overlap and context relevance
 function calculateMatchPercentage(resumeText: string, jobDescription: string): number {
@@ -295,12 +214,6 @@ function generateImprovementSuggestions(resumeText: string, jobDescription: stri
     });
   }
   
-  // ATS optimization suggestion
-  suggestions.push({
-    text: `Ensure your resume is ATS-friendly by using standard section headings and avoiding complex formatting`,
-    type: "improvement" as const
-  });
-  
   // Always suggest tailoring
   suggestions.push({
     text: `Tailor your resume summary to specifically address this role's requirements`,
@@ -353,16 +266,8 @@ function generateStrengthSuggestions(resumeText: string, jobDescription: string,
 }
 
 // Generate a personalized improvement plan
-function generateImprovementPlan(
-  resumeText: string, 
-  jobDescription: string, 
-  missingSkills: string[],
-  profileDetails: ProfileDetail
-): string[] {
+function generateImprovementPlan(resumeText: string, jobDescription: string, missingSkills: string[]): string[] {
   const plan: string[] = [];
-  
-  // Professional profile summary suggestion
-  plan.push(`Create a professional profile summary highlighting your key skills and experience`);
   
   // Always suggest resume summary update
   plan.push(`Update your resume summary to target this specific role`);
@@ -387,16 +292,6 @@ function generateImprovementPlan(
   
   // ATS optimization
   plan.push(`Format your resume for ATS compatibility, using standard headings and keywords`);
-  
-  // Contact info suggestion if missing
-  if (profileDetails.email === "Not found" || profileDetails.phone === "Not found") {
-    plan.push(`Ensure your contact information is clearly visible at the top of your resume`);
-  }
-  
-  // LinkedIn suggestion if missing
-  if (profileDetails.linkedin === "Not found") {
-    plan.push(`Add your LinkedIn profile URL to your contact information`);
-  }
   
   return plan;
 }
@@ -444,7 +339,7 @@ export const callGeminiApi = async (
   apiKey: string
 ) => {
   // This would be implemented with the actual Gemini API
-  // Similar to the Python implementation:
+  // For example:
   /*
   const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
     method: 'POST',
@@ -457,30 +352,20 @@ export const callGeminiApi = async (
         {
           parts: [
             {
-              text: `
-                Act like a skilled or very experienced ATS (Application Tracking System)
-                with a deep understanding of tech field, software engineering, data science, data analyst
-                and big data engineering. Your task is to evaluate the resume based on the given job description.
-                You must consider the job market is very competitive and you should provide
-                best assistance for improving the resumes.
-                
-                Resume:
-                ${resumeText}
-                
-                Job Description:
-                ${jobDescription}
-                
-                I want the response in below format:
-                
-                JD percentage: "%",
-                Profile Summary:" ",
-                Contact Details:  
-                Name: " ",
-                Email: " ",
-                Phone No: " ",
-                LinkedIn: " "
-                Suggestions: " "
-              `
+              text: `Analyze this resume against this job description.
+              
+              Resume:
+              ${resumeText}
+              
+              Job Description:
+              ${jobDescription}
+              
+              Provide:
+              1. A percentage match score
+              2. Key matching skills
+              3. Missing skills or keywords
+              4. Specific improvement suggestions
+              5. Strengths of the resume against this job`
             }
           ]
         }
